@@ -12,7 +12,7 @@
             org.apache.maven.plugins:maven-resources-plugin:resources
           </process-resources>
           <package>
-            com.samskivert:ikvm-maven-plugin:ikvm
+            playn.xna:ikvm-maven-plugin:ikvm
           </package>
           <install>
             org.apache.maven.plugins:maven-install-plugin:install

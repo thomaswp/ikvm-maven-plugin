@@ -51,6 +51,12 @@ public class IkvmMavenMojo extends AbstractMojo
      * @parameter expression="${dll.path}" default-value="/Developer/MonoTouch/usr/lib/mono/2.1"
      */
     public File dllPath;
+    
+    /**
+     * The location of the compiled PlayN-x.x.x.dll library.
+     * @parameter expression="${xna.path}"
+     */
+    public File xnaPath;
 
     /**
      * Indicates that IKVM should be run via Mono rather than run directly as an executable. The
@@ -124,10 +130,10 @@ public class IkvmMavenMojo extends AbstractMojo
         File artifactFile = new File(projectDir, _project.getBuild().getFinalName() + ".dll");
         _project.getArtifact().setFile(artifactFile);
 
-        if (ikvmPath == null) {
+        if (ikvmPath == null || xnaPath == null) {
             // if requested, create a zero size artifact file
             if (createStub) {
-                getLog().info("ikvm.path is not set. Creating stub IKVM artifact.");
+                getLog().info("ikvm.path or xna.path is not set. Creating stub IKVM artifact.");
                 try {
                     artifactFile.createNewFile();
                 } catch (IOException ioe) {
@@ -177,10 +183,10 @@ public class IkvmMavenMojo extends AbstractMojo
         Commandline cli;
         // determine whether to run ikvmc.exe directly or to run via mono
         if (!forceMono && System.getProperty("os.name").contains("Windows")) {
-            cli = new Commandline(ikvmcPath.getAbsolutePath());
+            cli = new Commandline("\"" + ikvmcPath.getAbsolutePath() + "\"");
         } else {
             cli = new Commandline("mono");
-            cli.createArgument().setValue(ikvmcPath.getAbsolutePath());
+            cli.createArg().setValue(ikvmcPath.getAbsolutePath());
         }
 
         // add our standard args
@@ -188,7 +194,7 @@ public class IkvmMavenMojo extends AbstractMojo
         stdArgs.add("-nostdlib");
         stdArgs.add("-target:library");
         for (String arg : stdArgs) {
-            cli.createArgument().setValue(arg);
+            cli.createArg().setValue(arg);
         }
 
         // add our user defined args (making sure they don't duplicate stdargs)
@@ -199,11 +205,11 @@ public class IkvmMavenMojo extends AbstractMojo
                               "and project.build.finalName in your POM.");
                 continue;
             }
-            cli.createArgument().setValue(arg);
+            cli.createArg().setValue(arg);
         }
 
         // add our output file
-        cli.createArgument().setValue("-out:" + artifactFile.getAbsolutePath());
+        cli.createArg().setValue("-out:" + artifactFile.getAbsolutePath());
 
         // add our standard DLLs
         List<String> stdDlls = new ArrayList<String>();
@@ -211,16 +217,16 @@ public class IkvmMavenMojo extends AbstractMojo
         stdDlls.add("System.dll");
         stdDlls.add("System.Core.dll");
         for (String dll : stdDlls) {
-            cli.createArgument().setValue("-r:" + getDLLPath(dll));
+            cli.createArg().setValue("-r:" + getDLLPath(dll));
         }
 
         // add our DLLs
         for (String dll : dlls) {
             if (stdDlls.contains(dll)) continue;
-            cli.createArgument().setValue("-r:" + getDLLPath(dll));
+            cli.createArg().setValue("-r:" + getDLLPath(dll));
         }
         for (Artifact dll : dllDepends) {
-            cli.createArgument().setValue("-r:" + dll.getFile().getAbsolutePath());
+            cli.createArg().setValue("-r:" + dll.getFile().getAbsolutePath());
         }
 
         // if we're in onlyCode mode, then unpack our jars into a temporary directory and delete
@@ -246,20 +252,24 @@ public class IkvmMavenMojo extends AbstractMojo
                     throw new MojoExecutionException("Error extracting classes from: " + depend, e);
                 }
             }
-            cli.createArgument().setValue("-recurse:" + codeDir.getAbsolutePath() + File.separator +
+            cli.createArg().setValue("-recurse:" + codeDir.getAbsolutePath() + File.separator +
                                           "*.class");
 
         } else {
             // otherwise just add our jar files to the argument list
             for (File depend : javaDepends) {
-                cli.createArgument().setValue(depend.getAbsolutePath());
+            	String path = depend.getAbsolutePath();
+            	if (path.contains("playn-core-") || path.contains("pythagoras-")) continue;
+                cli.createArg().setValue(depend.getAbsolutePath());
             }
+            cli.createArg().setValue("-r:" + xnaPath.getAbsolutePath() + File.separator + "PlayN-1.8.5.dll");
         }
 
         // copy any to-be-copied dlls
         for (String dll : copyDlls) {
             File dfile = new File(dll);
             if (!dfile.exists()) dfile = new File(ikvmPath, dll);
+            if (!dfile.exists()) dfile = new File(xnaPath, dll);
             if (!dfile.exists()) throw new MojoExecutionException(
                 dll + " does not exist (nor does " + dfile.getPath() + ")");
             try {
