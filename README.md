@@ -1,33 +1,34 @@
 # ikvm-maven-plugin
 
+This project is a fork of [https://github.com/samskivert/ikvm-maven-plugin](samskiver's plugin).
+
 This Maven plugin runs IKVM on a collection of Java jar files (defined by the
 dependencies in the POM that includes this plugin).
 
-The primary itch it scratches is to generate DLLs for use by the iOS backend of
-the [PlayN] cross-platform game development library, but it should in theory be
-usable for incorporating IKVM into any Maven build.
+The primary putpose is to generate DLLs for use by an XNA backend of
+the [PlayN] cross-platform game development library. This project requires a
+compiled .dll of the PlayN core library, which is included in the parent repo
+under the "../compiled" folder. Because this is intended for use with XNA, it has
+been designed and tested on Windows.
 
 It defines a `dll` packaging type and generates a `dll` artifact.
 
 ## Usage
 
 One must configure their IKVM installation location in Maven's global settings
-(`~/.m2/settings.xml`). For example:
+(%userprofile%\.m2\settings.xml). If it does not exist, create it. For example:
 
     <profiles>
       <profile>
         <id>ikvm</id>
         <properties>
-          <ikvm.path>${user.home}/projects/ikvm-monotouch</ikvm.path>
-          <!-- ikvmc.path specifies where to find ikvmc.exe. It defaults to:
-               ${ikvm.path}/bin/ikvmc.exe -->
-          <!-- <ikvmc.path>/path/to/ikvmc.exe</ikvmc.path> -->
-          <!-- dll.path specifies where to find the standard libraries. It defaults to:
-               /Developer/MonoTouch/usr/lib/mono/2.1
-               You can customize it to use some other Mono installation, or
-               leave it pointing to a non-existent directory to locate standard
-               libraries via the built-in library search path. -->
-          <!-- <dll.path>/path/to/mono/usr/lib/x.x</dll.path> -->
+		  <!-- Path to your ikvm installation -->
+          <ikvm.path>C:\Program Files\ikvm</ikvm.path>
+		  <!-- Path to the .NET .dlls, either from a .NET Framework or Mono installation -->
+		  <dll.path>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\Profile\Client\</dll.path>
+		  <!-- Path to the folder containing the PlayN-x.x.x.dll file, as well as any other required .dlls for XNA -->
+		  <!-- If you have downloaded this repo, this folder should already exist at ../compiled -->
+		  <playn.path>C:\...\compiled</playn.path>
         </properties>
       </profile>
     </profiles>
@@ -62,32 +63,34 @@ Once that's done, the following POM fragment demonstrates the use of this plugin
       <build>
         <plugins>
           <plugin>
-            <groupId>com.samskivert</groupId>
-            <artifactId>ikvm-maven-plugin</artifactId>
-            <version>1.0</version>
-            <!-- this lets Maven know that we define 'packaging: dll' -->
-            <extensions>true</extensions>
-            <configuration>
-              <ikvmArgs>
-                <ikvmArg>-debug</ikvmArg>
-              </ikvmArgs>
-              <!-- these are additional referenced DLLs (beyond mscorlib, System and System.Core) -->
-              <dlls>
-                <dll>System.Data.dll</dll>
-                <dll>OpenTK.dll</dll>
-                <dll>monotouch.dll</dll>
-                <dll>Mono.Data.Sqlite.dll</dll>
-              </dlls>
-            </configuration>
-          </plugin>
+			<groupId>playn.xna</groupId>
+			<artifactId>ikvm-maven-plugin</artifactId>
+			<version>1.3</version>
+			<extensions>true</extensions>
+			<configuration>
+			  <ikvmArgs>
+				<ikvmArg>-debug</ikvmArg>
+			  </ikvmArgs>
+			  <createStub>true</createStub>
+			  <dlls>
+			  </dlls>
+			  <copyDlls>
+				<copyDll>bin/IKVM.Runtime.dll</copyDll>
+				<copyDll>bin/IKVM.Runtime.JNI.dll</copyDll>
+				<copyDll>bin/IKVM.OpenJDK.Core.dll</copyDll>
+				<copyDll>bin/IKVM.OpenJDK.Util.dll</copyDll>
+				<copyDll>bin/IKVM.OpenJDK.Text.dll</copyDll>
+				<!-- PlayN dlls, placed in the "playn.path" folder -->
+				<copyDll>PlayN-1.8.5.dll</copyDll>
+				<copyDll>PlayNXNA.dll</copyDll>
+				<copyDll>PlayNContentImporter.dll</copyDll>
+			  </copyDlls>
+			</configuration>
+		  </plugin>
         </plugins>
       </build>
     </project>
 
-On Windows, the plugin will execute `ikvmc.exe` directly. On non-Windows
-platforms, the plugin expects `mono` to be in your path on the command line.
-You can force the use of Mono even on Windows by adding
-`<force.mono>true</force.mono>` in `<configuration>`.
 
 ## License
 
@@ -95,4 +98,5 @@ ikvm-maven-plugin is released under the New BSD License, which can be found in
 the [LICENSE] file.
 
 [PlayN]: http://code.google.com/p/playn
-[LICENSE]: https://github.com/samskivert/ikvm-maven-plugin/blob/master/LICENSE
+[PlayNXNA]: https://github.com/thomaswp/playn-xna/
+[LICENSE]: ./LICENSE

@@ -54,9 +54,9 @@ public class IkvmMavenMojo extends AbstractMojo
     
     /**
      * The location of the compiled PlayN-x.x.x.dll library.
-     * @parameter expression="${xna.path}"
+     * @parameter expression="${playn.path}"
      */
-    public File xnaPath;
+    public File playnPath;
 
     /**
      * Indicates that IKVM should be run via Mono rather than run directly as an executable. The
@@ -121,7 +121,7 @@ public class IkvmMavenMojo extends AbstractMojo
     public void execute () throws MojoExecutionException {
         // create our target directory if needed (normally the jar plugin does this, but we don't
         // run the jar plugin)
-        File projectDir = new File(_project.getBuild().getDirectory());
+        File projectDir = new File(_project.getBasedir(), "game");
         if (!projectDir.isDirectory()) {
             projectDir.mkdir();
         }
@@ -130,7 +130,7 @@ public class IkvmMavenMojo extends AbstractMojo
         File artifactFile = new File(projectDir, _project.getBuild().getFinalName() + ".dll");
         _project.getArtifact().setFile(artifactFile);
 
-        if (ikvmPath == null || xnaPath == null) {
+        if (ikvmPath == null) {
             // if requested, create a zero size artifact file
             if (createStub) {
                 getLog().info("ikvm.path or xna.path is not set. Creating stub IKVM artifact.");
@@ -262,14 +262,14 @@ public class IkvmMavenMojo extends AbstractMojo
             	if (path.contains("playn-core-") || path.contains("pythagoras-")) continue;
                 cli.createArg().setValue(depend.getAbsolutePath());
             }
-            cli.createArg().setValue("-r:" + xnaPath.getAbsolutePath() + File.separator + "PlayN-1.8.5.dll");
+            cli.createArg().setValue("-r:" + playnPath.getAbsolutePath() + File.separator + "PlayN-1.8.5.dll");
         }
 
         // copy any to-be-copied dlls
         for (String dll : copyDlls) {
             File dfile = new File(dll);
             if (!dfile.exists()) dfile = new File(ikvmPath, dll);
-            if (!dfile.exists()) dfile = new File(xnaPath, dll);
+            if (!dfile.exists()) dfile = new File(playnPath, dll);
             if (!dfile.exists()) throw new MojoExecutionException(
                 dll + " does not exist (nor does " + dfile.getPath() + ")");
             try {
